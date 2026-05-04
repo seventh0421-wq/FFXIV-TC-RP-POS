@@ -1,0 +1,90 @@
+{
+  "entities": {
+    "Shop": {
+      "title": "Shop",
+      "description": "Store configuration and identity",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "managerPassword": { "type": "string" },
+        "staffPassword": { "type": "string" },
+        "theme": { "type": "string", "enum": ["warm-retro", "soft-mint", "earth-neutral"] },
+        "categories": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "managerPassword", "staffPassword", "theme"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Item available for sale",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "image": { "type": "string" }
+      },
+      "required": ["name", "price", "category"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Sale transaction record",
+      "type": "object",
+      "properties": {
+        "staffName": { "type": "string" },
+        "customerId": { "type": "string" },
+        "items": { "type": "array" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["staffName", "items", "total", "status", "createdAt"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer record",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "notes": { "type": "string" },
+        "registeredAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "registeredAt"]
+    },
+    "ActivationCode": {
+      "title": "Activation Code",
+      "description": "One-time use code to create a shop",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "isUsed": { "type": "boolean" },
+        "storeName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "usedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "isUsed"]
+    }
+  },
+  "firestore": {
+    "/activationCodes/{id}": {
+      "schema": "ActivationCode",
+      "description": "Library of valid one-time activation codes"
+    },
+    "/shops/{shopId}": {
+      "schema": "Shop",
+      "description": "Root document for a specific shop"
+    },
+    "/shops/{shopId}/products/{productId}": {
+      "schema": "Product",
+      "description": "Products owned by the shop"
+    },
+    "/shops/{shopId}/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Orders processed by the shop"
+    },
+    "/shops/{shopId}/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Customers registered at the shop"
+    }
+  }
+}

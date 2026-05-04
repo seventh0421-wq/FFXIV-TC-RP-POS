@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=VT323&family=JetBrains+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Serif TC", "Inter", serif;
+  --font-mono: "VT323", "JetBrains Mono", monospace;
+  --font-digital: "VT323", monospace;
+}
+
+@layer base {
+  :root {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --text-primary: #020617;
+    --text-secondary: #334155;
+    --accent: #de4451;
+    --accent-hover: #c03945;
+    --border: #e2e8f0;
+    --card-bg: #ffffff;
+    --shadow-accent: rgba(222, 68, 81, 0.1);
+    --price-color: #de4451;
+    --base-size: 1.05rem;
+  }
+
+  .fontSize-small {
+    --base-size: 0.9rem;
+  }
+  .fontSize-medium {
+    --base-size: 1.05rem;
+  }
+  .fontSize-large {
+    --base-size: 1.2rem;
+  }
+
+  /* 圖 1: 溫甜復古 (暖紅與奶油) */
+  .theme-warm-retro {
+    --bg-primary: #fffbf2;
+    --bg-secondary: #f7f3e8;
+    --text-primary: #1a0f08; /* 極深啡 */
+    --text-secondary: #5c4033;
+    --accent: #c22e3c; /* 活力紅 */
+    --accent-hover: #a0242f;
+    --border: #e8e2d0;
+    --card-bg: #ffffff;
+    --shadow-accent: rgba(194, 46, 60, 0.2);
+    --price-color: #c22e3c;
+  }
+
+  /* 圖 2: 清新薄荷 (森林綠與白) */
+  .theme-soft-mint {
+    --bg-primary: #f2fdf5;
+    --bg-secondary: #e6f7eb;
+    --text-primary: #064e3b; /* 極深森綠 */
+    --text-secondary: #166534;
+    --accent: #ec4899; /* 玫瑰粉 */
+    --accent-hover: #db2777;
+    --border: #d1ecda;
+    --card-bg: #ffffff;
+    --shadow-accent: rgba(236, 72, 153, 0.2);
+    --price-color: #064e3b;
+  }
+
+  /* 圖 3: 摩登靛藍 (海軍藍與灰) */
+  .theme-earth-neutral {
+    --bg-primary: #f0f4f8;
+    --bg-secondary: #dbeafe;
+    --text-primary: #0f172a; /* 極深紺藍 */
+    --text-secondary: #334155;
+    --accent: #4338ca; /* 靛藍色 */
+    --accent-hover: #3730a3;
+    --border: #cbd5e1;
+    --card-bg: #ffffff;
+    --shadow-accent: rgba(67, 56, 202, 0.2);
+    --price-color: #4338ca;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  font-family: var(--font-sans);
+  font-size: var(--base-size);
+}
+
+/* 讓所有數字與英文自動使用數位字體 */
+.font-mono, 
+input[type="number"],
+.order-id,
+.price-tag {
+  font-family: var(--font-digital);
+  letter-spacing: 0.05em;
+  color: var(--price-color) !important;
+  font-weight: 700;
+}
+
+.pos-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.pos-btn-primary {
+  background-color: var(--accent);
+  color: white;
+  box-shadow: 0 4px 6px -1px var(--shadow-accent);
+}
+
+.pos-btn-primary:hover {
+  background-color: var(--accent-hover);
+}
+
+.pos-text-secondary {
+  color: var(--text-secondary);
+}
+
+.pos-border {
+  border-color: var(--border);
+}

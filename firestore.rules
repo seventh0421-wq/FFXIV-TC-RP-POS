@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Default Deny - Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Validation Helpers
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // 2. Activation Codes
+    match /activationCodes/{id} {
+      // 允許開通流程查詢與驗證
+      allow read, write: if true;
+    }
+
+    // 3. Shop Data - Secure Login & Obscurity
+    match /shops/{shopId} {
+      // 允許任何人透過 ID 獲取店家資料或透過名稱搜尋店家
+      allow get, list: if true;
+      
+      // 建立與更新店家資料（開通與設置時使用）
+      allow create, update: if true;
+
+      // 4. Shop Sub-collections (Obscurity Logic)
+      // 這裡維持：必須知道正確的 shopId 才能存取子集合
+      match /products/{productId} {
+        allow read, write: if isValidId(shopId);
+      }
+
+      match /orders/{orderId} {
+        allow read, write: if isValidId(shopId);
+      }
+
+      match /customers/{customerId} {
+        allow read, write: if isValidId(shopId);
+      }
+    }
+  }
+}
