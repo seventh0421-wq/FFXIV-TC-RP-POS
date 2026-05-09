@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=VT323&family=JetBrains+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&family=Noto+Sans+TC:wght@400;700;900&family=VT323&family=JetBrains+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Noto Serif TC", "Inter", serif;
+  --font-sans: "Inter", "Noto Sans TC", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "VT323", "JetBrains Mono", monospace;
   --font-digital: "VT323", monospace;
 }
@@ -91,6 +91,8 @@ body {
   transition: all 0.3s ease;
   font-family: var(--font-sans);
   font-size: var(--base-size);
+  font-weight: 800; /* 全域設定為粗體 */
+  -webkit-font-smoothing: antialiased;
 }
 
 /* 讓所有數字與英文自動使用數位字體 */
