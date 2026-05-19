@@ -44,9 +44,14 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        const systemStatus = parsed.shopId ? 
+          (parsed.systemStatus === 'activation' || !parsed.systemStatus ? 'login' : parsed.systemStatus) : 
+          'activation';
+          
         return { 
           ...defaultState,
-          ...parsed, 
+          ...parsed,
+          systemStatus,
           isLoggedIn: false,
           role: 'none',
           staffName: '',
@@ -61,10 +66,9 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Helper for date range
   const getDateRange = (dateStr: string) => {
-    const start = new Date(dateStr);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(dateStr);
-    end.setHours(23, 59, 59, 999);
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const start = new Date(year, month - 1, day, 0, 0, 0);
+    const end = new Date(year, month - 1, day, 23, 59, 59, 999);
     return { start: Timestamp.fromDate(start), end: Timestamp.fromDate(end) };
   };
 
@@ -461,6 +465,8 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const ordersRef = collection(db, 'shops', state.shopId, 'orders');
+      const orderDate = new Date().toISOString().split('T')[0];
+      
       await addDoc(ordersRef, {
         staffName: state.staffName,
         customerId: customerId || null,
@@ -469,10 +475,13 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         total,
         status: 'pending',
         createdAt: serverTimestamp(),
+        orderDate: orderDate,
+        shopId: state.shopId, // Explicitly include shopId inside doc for safety
         isGroup: isGroup || false,
         headcount: headcount || 1,
         note: note || '',
       });
+      console.log(`Order created successfully for ${orderDate}`);
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'orders');
     }

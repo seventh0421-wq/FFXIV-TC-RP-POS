@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { usePos } from '../context/PosContext';
-import { Plus, Save, Trash2, Tag, Edit3, ShieldCheck, Key, Crown, Users, Check, Bell, Link, Send, Upload, AlertCircle, FileText, Sparkles } from 'lucide-react';
+import { Plus, Save, Trash2, Tag, Edit3, ShieldCheck, Key, Crown, Users, Check, Bell, Link, Send, Upload, AlertCircle, FileText, Sparkles, GripVertical, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const SettingsView: React.FC = () => {
@@ -624,25 +624,41 @@ export const SettingsView: React.FC = () => {
                       )}
                       
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleMoveCategory(index, 'up')}
-                          disabled={index === 0}
-                          className="p-1 hover:bg-slate-100 rounded text-slate-400 disabled:opacity-0"
-                        >
-                          <Plus size={14} className="rotate-45" /> 
-                        </button>
+                        <div className="flex flex-col gap-0.5 mr-2">
+                          <button 
+                            onClick={() => handleMoveCategory(index, 'up')}
+                            disabled={index === 0}
+                            className="p-1 hover:bg-slate-100 rounded text-slate-400 disabled:opacity-30"
+                            title="上移"
+                          >
+                            <ChevronUp size={14} /> 
+                          </button>
+                          <button 
+                            onClick={() => handleMoveCategory(index, 'down')}
+                            disabled={index === state.categories.length - 1}
+                            className="p-1 hover:bg-slate-100 rounded text-slate-400 disabled:opacity-30"
+                            title="下移"
+                          >
+                            <ChevronDown size={14} /> 
+                          </button>
+                        </div>
+                        <div className="p-1 text-slate-300 cursor-grab active:cursor-grabbing">
+                          <GripVertical size={16} />
+                        </div>
                         <button 
                           onClick={() => {
                             setEditingCategoryIndex(index);
                             setEditingCategoryValue(cat);
                           }}
-                          className="p-1 hover:bg-indigo-50 text-indigo-500 rounded"
+                          className="p-1.5 hover:bg-indigo-50 text-indigo-500 rounded-lg transition-colors"
+                          title="編輯名稱"
                         >
                           <Edit3 size={14} />
                         </button>
                         <button 
                           onClick={() => handleDeleteCategory(index)}
-                          className="p-1 hover:bg-red-50 text-red-500 rounded"
+                          className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                          title="刪除分類"
                         >
                           <Trash2 size={14} />
                         </button>

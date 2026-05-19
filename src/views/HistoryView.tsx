@@ -126,7 +126,7 @@ export const HistoryView: React.FC = () => {
           {completedOrders.length === 0 && (
             <div className="p-20 flex flex-col items-center justify-center opacity-20 gap-4">
               <ShoppingBag size={48} />
-              <p className="font-medium text-lg">查為訂單紀錄</p>
+              <p className="font-medium text-lg">查無訂單紀錄</p>
             </div>
           )}
         </div>
