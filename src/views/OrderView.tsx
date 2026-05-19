@@ -20,18 +20,41 @@ export const OrderView: React.FC = () => {
   // Checkout Modal State
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [paymentMode, setPaymentMode] = useState<'together' | 'separate'>('together');
-  
-  // Auto-sync headcount with unique IDs in cart
-  React.useEffect(() => {
-    if (isGroup && cart.length > 0) {
-      const uniqueSubs = new Set(cart.map(item => item.subCustomer?.trim()).filter(Boolean));
-      if (uniqueSubs.size > headcount) {
-        setHeadcount(uniqueSubs.size);
-      }
-    }
-  }, [cart, isGroup, headcount]);
+
+  // Combo Selection Modal State
+  const [comboBeingConfigured, setComboBeingConfigured] = useState<Product | null>(null);
+  const [selectedComboSubItems, setSelectedComboSubItems] = useState<{ productName: string; quantity: number }[]>([]);
 
   const filteredProducts = (state.products || []).filter(p => p.category === selectedCategory);
+
+  const addToCartWithCombo = (product: Product, subItems?: { productName: string; quantity: number }[]) => {
+    const cartId = `${product.id}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    setCart(prev => [...prev, { 
+      ...product, 
+      quantity: 1, 
+      cartId, 
+      itemNote: '', 
+      subCustomer: activeSubCustomer,
+      comboItems: subItems || product.comboItems 
+    }]);
+  };
+
+  const handleProductClick = (product: Product) => {
+    if (product.type === 'combo') {
+      setComboBeingConfigured(product);
+      setSelectedComboSubItems(product.comboItems || []);
+    } else {
+      addToCart(product);
+    }
+  };
+
+  const confirmComboAdd = () => {
+    if (comboBeingConfigured) {
+      addToCartWithCombo(comboBeingConfigured, selectedComboSubItems);
+      setComboBeingConfigured(null);
+      setSelectedComboSubItems([]);
+    }
+  };
 
   const addToCart = (product: Product) => {
     const cartId = `${product.id}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
@@ -105,6 +128,15 @@ export const OrderView: React.FC = () => {
     }).join(', ');
 
     const customerName = customerInput.trim() || '';
+    
+    // Auto-add new customer if needed
+    if (customerName && !targetCustomerId) {
+      const isKnownName = (state.customers || []).some(c => c.name === customerName);
+      if (!isKnownName) {
+        addCustomer({ name: customerName, notes: '系統自動登錄' });
+      }
+    }
+
     const customerStr = customerName ? `${customerName} 閣下` : '貴賓';
     const groupSuffix = isGroup ? ` (👥 ${headcount}人)` : '';
     const noteSuffix = note.trim() ? ` (備註: ${note.trim()})` : '';
@@ -204,7 +236,7 @@ ${cart.map(item => {
             <motion.button
               whileTap={{ scale: 0.95 }}
               key={product.id}
-              onClick={() => addToCart(product)}
+              onClick={() => handleProductClick(product)}
               className={`group pos-card p-4 rounded-2xl shadow-sm hover:shadow-md transition-all text-left flex flex-col gap-3 relative ${product.type === 'combo' ? 'ring-2 ring-amber-400/50 bg-amber-50/10' : ''}`}
             >
               {product.type === 'combo' && (
@@ -554,6 +586,126 @@ ${cart.map(item => {
                 <p className="text-center text-[10px] font-bold text-slate-400 mt-4 uppercase tracking-widest">
                   結帳後將自動複製巨集並推播至 Discord
                 </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Combo Configuration Modal */}
+      <AnimatePresence>
+        {comboBeingConfigured && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setComboBeingConfigured(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="p-6 bg-amber-50 border-b border-amber-100 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-black text-slate-800">
+                    配置套餐：{comboBeingConfigured.name}
+                  </h3>
+                  <p className="text-xs font-bold text-amber-600 uppercase tracking-widest mt-1">
+                    您可以自由增減套餐內的品項，或從下方追加任何單品
+                  </p>
+                </div>
+                <button onClick={() => setComboBeingConfigured(null)} className="text-slate-400 hover:text-slate-600 p-2">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Selected Items */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 border-b pb-2 flex justify-between items-center">
+                    <span>已選擇的內容</span>
+                    <span className="text-indigo-600">{selectedComboSubItems.length} 項</span>
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedComboSubItems.map((ci, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
+                        <span className="font-black text-sm text-slate-800 truncate flex-1">{ci.productName}</span>
+                        <div className="flex items-center gap-3 ml-2">
+                          <button 
+                            onClick={() => {
+                              if (ci.quantity > 1) {
+                                setSelectedComboSubItems(selectedComboSubItems.map((item, i) => i === idx ? { ...item, quantity: item.quantity - 1 } : item));
+                              } else {
+                                setSelectedComboSubItems(selectedComboSubItems.filter((_, i) => i !== idx));
+                              }
+                            }}
+                            className="w-7 h-7 bg-white rounded-lg flex items-center justify-center font-bold text-indigo-400 shadow-sm border border-indigo-100"
+                          >-</button>
+                          <span className="font-black text-sm min-w-[20px] text-center">{ci.quantity}</span>
+                          <button 
+                            onClick={() => setSelectedComboSubItems(selectedComboSubItems.map((item, i) => i === idx ? { ...item, quantity: item.quantity + 1 } : item))}
+                            className="w-7 h-7 bg-white rounded-lg flex items-center justify-center font-bold text-indigo-400 shadow-sm border border-indigo-100"
+                          >+</button>
+                        </div>
+                      </div>
+                    ))}
+                    {selectedComboSubItems.length === 0 && (
+                      <div className="py-10 text-center opacity-20 border-2 border-dashed rounded-3xl flex flex-col items-center gap-2">
+                        <ShoppingBag size={32} />
+                        <span className="text-xs font-bold uppercase tracking-widest">尚未選擇任何內容</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Available Items */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 border-b pb-2">可追加品項 (料理與服務)</h4>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    {state.products.filter(p => p.type !== 'combo').map(p => {
+                      const isAdded = selectedComboSubItems.some(ci => ci.productName === p.name);
+                      return (
+                        <button 
+                          key={p.id}
+                          onClick={() => {
+                            if (isAdded) {
+                              setSelectedComboSubItems(selectedComboSubItems.map(ci => ci.productName === p.name ? { ...ci, quantity: ci.quantity + 1 } : ci));
+                            } else {
+                              setSelectedComboSubItems([...selectedComboSubItems, { productName: p.name, quantity: 1 }]);
+                            }
+                          }}
+                          className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-transparent hover:border-slate-200 transition-all text-left"
+                        >
+                          <div>
+                            <div className="font-bold text-sm text-slate-700">{p.name}</div>
+                            <div className="text-[10px] font-black opacity-30 uppercase">{p.category}</div>
+                          </div>
+                          <Plus size={16} className="text-slate-300" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-slate-50 border-t flex gap-4">
+                <button 
+                  onClick={() => setComboBeingConfigured(null)}
+                  className="px-8 py-4 bg-white border pos-border rounded-2xl font-black text-sm text-slate-500 hover:bg-slate-100 transition-all uppercase tracking-widest"
+                >
+                  取消
+                </button>
+                <button 
+                  onClick={confirmComboAdd}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-[0.98] shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                >
+                  <ClipboardCheck size={20} />
+                  確認配置並加入購物車
+                </button>
               </div>
             </motion.div>
           </div>

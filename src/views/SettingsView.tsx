@@ -4,9 +4,51 @@ import { Plus, Save, Trash2, Tag, Edit3, ShieldCheck, Key, Crown, Users, Check, 
 import { motion, AnimatePresence } from 'motion/react';
 
 export const SettingsView: React.FC = () => {
-  const { state, addProduct, updateProduct, deleteProduct, bulkAddProducts, updatePasswords, resetSystem, updateStaffList, updateDiscordWebhookUrl, setFontSize, setTheme, updateAnnouncement } = usePos();
+  const { 
+    state, addProduct, updateProduct, deleteProduct, 
+    bulkAddProducts, updatePasswords, resetSystem, 
+    updateStaffList, updateDiscordWebhookUrl, setFontSize, 
+    setTheme, updateAnnouncement, updateCategories 
+  } = usePos();
+  
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+
+  // Category Management State
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategoryIndex, setEditingCategoryIndex] = useState<number | null>(null);
+  const [editingCategoryValue, setEditingCategoryValue] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  const handleUpdateCategory = async () => {
+    if (editingCategoryIndex !== null && editingCategoryValue.trim()) {
+      const updated = [...state.categories];
+      updated[editingCategoryIndex] = editingCategoryValue.trim();
+      await updateCategories(updated);
+      setEditingCategoryIndex(null);
+    }
+  };
+
+  const handleDeleteCategory = async (index: number) => {
+    const updated = state.categories.filter((_, i) => i !== index);
+    await updateCategories(updated);
+  };
+
+  const handleMoveCategory = async (index: number, direction: 'up' | 'down') => {
+    const updated = [...state.categories];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex >= 0 && newIndex < updated.length) {
+      [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+      await updateCategories(updated);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (newCategoryName.trim() && !state.categories.includes(newCategoryName.trim())) {
+      await updateCategories([...state.categories, newCategoryName.trim()]);
+      setNewCategoryName('');
+    }
+  };
   
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   
@@ -535,6 +577,81 @@ export const SettingsView: React.FC = () => {
                 </div>
                 <p className="text-[9px] font-bold opacity-40 leading-relaxed pt-2">
                   💡 設定完成後，此名單將用於報表端對比「未開市員工」，方便補發底薪。
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Category Management - MANAGER ONLY */}
+          {state.role === 'manager' && (
+            <div className="pos-card rounded-3xl p-6 border shadow-sm pos-border bg-slate-50/50">
+              <h2 className="text-lg font-black mb-6 flex items-center gap-2">
+                <Tag size={20} className="text-accent" />
+                菜單分類管理
+              </h2>
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={newCategoryName}
+                    onChange={e => setNewCategoryName(e.target.value)}
+                    className="flex-1 bg-white border pos-border rounded-xl px-4 py-2 outline-none font-bold placeholder:opacity-30 text-sm"
+                    placeholder="輸入新分類名稱"
+                    onKeyDown={e => e.key === 'Enter' && handleAddCategory()}
+                  />
+                  <button 
+                    onClick={handleAddCategory}
+                    className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center hover:bg-black transition-all"
+                  >
+                    <Plus size={20} />
+                  </button>
+                </div>
+                
+                <div className="space-y-2">
+                  {state.categories.map((cat, index) => (
+                    <div key={cat} className="flex items-center gap-2 bg-white p-3 rounded-xl border pos-border group">
+                      {editingCategoryIndex === index ? (
+                        <input 
+                          autoFocus
+                          value={editingCategoryValue}
+                          onChange={e => setEditingCategoryValue(e.target.value)}
+                          onBlur={handleUpdateCategory}
+                          onKeyDown={e => e.key === 'Enter' && handleUpdateCategory()}
+                          className="flex-1 bg-black/5 border-none px-2 py-1 rounded text-sm font-black outline-none"
+                        />
+                      ) : (
+                        <span className="flex-1 text-sm font-black text-slate-800">{cat}</span>
+                      )}
+                      
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => handleMoveCategory(index, 'up')}
+                          disabled={index === 0}
+                          className="p-1 hover:bg-slate-100 rounded text-slate-400 disabled:opacity-0"
+                        >
+                          <Plus size={14} className="rotate-45" /> 
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setEditingCategoryIndex(index);
+                            setEditingCategoryValue(cat);
+                          }}
+                          className="p-1 hover:bg-indigo-50 text-indigo-500 rounded"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteCategory(index)}
+                          className="p-1 hover:bg-red-50 text-red-500 rounded"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[9px] font-bold opacity-40 leading-relaxed pt-2">
+                  💡 您可以調整順序、編輯名稱或刪除不再使用的分類。
                 </p>
               </div>
             </div>

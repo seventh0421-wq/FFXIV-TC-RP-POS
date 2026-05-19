@@ -136,6 +136,7 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     const unsubOrders = onSnapshot(ordersQuery, (snap) => {
+      console.log(`Synced ${snap.size} orders for date ${state.filterDate}`);
       const orders = snap.docs.map(d => {
         const data = d.data();
         return { 
@@ -145,7 +146,10 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } as Order;
       });
       setState(prev => ({ ...prev, orders }));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'orders'));
+    }, (err) => {
+      console.error("Order Sync Error:", err);
+      handleFirestoreError(err, OperationType.LIST, 'orders');
+    });
 
     const unsubCustomers = onSnapshot(customersRef, (snap) => {
       const customers = snap.docs.map(d => {
@@ -164,7 +168,7 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubOrders();
       unsubCustomers();
     };
-  }, [state.isLoggedIn, state.shopId]);
+  }, [state.isLoggedIn, state.shopId, state.filterDate]);
 
   // Actions
   const removeUndefined = (obj: any) => {
@@ -555,6 +559,17 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateCategories = async (categories: string[]) => {
+    if (!state.shopId) return;
+    try {
+      const shopRef = doc(db, 'shops', state.shopId);
+      await updateDoc(shopRef, { categories });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, 'shops/' + state.shopId);
+      throw err;
+    }
+  };
+
   const updateDiscordWebhookUrl = async (discordWebhookUrl: string) => {
     if (!state.shopId) return;
     try {
@@ -605,6 +620,7 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateCustomer,
       deleteCustomer,
       updateStaffList,
+      updateCategories,
       updateDiscordWebhookUrl
     }}>
       {children}

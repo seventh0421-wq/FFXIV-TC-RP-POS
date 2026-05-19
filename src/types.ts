@@ -110,5 +110,6 @@ export interface PosContextType {
   updateCustomer: (customer: Customer) => void;
   deleteCustomer: (id: string) => void;
   updateStaffList: (staffList: string[]) => void;
+  updateCategories: (categories: string[]) => Promise<void>;
   updateDiscordWebhookUrl: (url: string) => Promise<void>;
 }
