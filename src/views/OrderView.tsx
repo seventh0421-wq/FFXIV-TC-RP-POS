@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { usePos } from '../context/PosContext';
 import { Product, CartItem } from '../types';
-import { Plus, Minus, Trash2, ClipboardCheck, ShoppingBag, Coffee, User, Edit3, CreditCard, Users, X } from 'lucide-react';
+import { Plus, Minus, Trash2, ClipboardCheck, ShoppingBag, Coffee, User, Edit3, CreditCard, Users, X, FileText, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const OrderView: React.FC = () => {
@@ -13,6 +13,7 @@ export const OrderView: React.FC = () => {
   const [isGroup, setIsGroup] = useState(false);
   const [headcount, setHeadcount] = useState(1);
   const [note, setNote] = useState('');
+  const [checkoutMacroText, setCheckoutMacroText] = useState('');
   
   // Quick-fill state for sub-customer
   const [activeSubCustomer, setActiveSubCustomer] = useState('');
@@ -98,9 +99,36 @@ export const OrderView: React.FC = () => {
     return acc;
   }, {} as Record<string, { total: number, items: CartItem[] }>);
 
+  const getGeneratedMacro = (mode: 'together' | 'separate') => {
+    const itemsStr = cart.map(item => {
+      const customerPart = item.subCustomer ? `[${item.subCustomer}] ` : '';
+      const notePart = item.itemNote ? ` (${item.itemNote})` : '';
+      if (item.type === 'combo' && item.comboItems) {
+        const details = item.comboItems.map(ci => `${ci.productName}x${ci.quantity}`).join(', ');
+        return `${customerPart}${item.name}${notePart} (內含: ${details})x${item.quantity}`;
+      }
+      return `${customerPart}${item.name}${notePart}x${item.quantity}`;
+    }).join(', ');
+
+    const customerName = customerInput.trim() || '';
+    const customerStr = customerName ? `${customerName} 閣下` : '貴賓';
+    const groupSuffix = isGroup ? ` (👥 ${headcount}人)` : '';
+    const noteSuffix = note.trim() ? ` (備註: ${note.trim()})` : '';
+
+    if (mode === 'together') {
+      return `歡迎光臨！${customerStr}${groupSuffix}，您的餐點：${itemsStr}，總計 ${total.toLocaleString()} Gil。${noteSuffix}感謝您的惠顧！`;
+    } else {
+      const splitDetail = Object.entries(groupedItems)
+        .map(([name, data]: [string, any]) => `${name} ${data.total.toLocaleString()} Gil`)
+        .join(', ');
+      return `歡迎光臨！${customerStr}${groupSuffix}。本桌總計 ${total.toLocaleString()} Gil。各自結帳明細：${splitDetail}。請依序與我交易，感謝！`;
+    }
+  };
+
   const handleCheckout = () => {
     if (cart.length === 0) return;
     setIsCheckoutModalOpen(true);
+    setCheckoutMacroText(getGeneratedMacro(paymentMode));
   };
 
   const confirmCheckout = async () => {
@@ -117,16 +145,6 @@ export const OrderView: React.FC = () => {
       }
     }
 
-    const itemsStr = cart.map(item => {
-      const customerPart = item.subCustomer ? `[${item.subCustomer}] ` : '';
-      const notePart = item.itemNote ? ` (${item.itemNote})` : '';
-      if (item.type === 'combo' && item.comboItems) {
-        const details = item.comboItems.map(ci => `${ci.productName}x${ci.quantity}`).join(', ');
-        return `${customerPart}${item.name}${notePart} (內含: ${details})x${item.quantity}`;
-      }
-      return `${customerPart}${item.name}${notePart}x${item.quantity}`;
-    }).join(', ');
-
     const customerName = customerInput.trim() || '';
     
     // Auto-add new customer if needed
@@ -137,23 +155,8 @@ export const OrderView: React.FC = () => {
       }
     }
 
-    const customerStr = customerName ? `${customerName} 閣下` : '貴賓';
-    const groupSuffix = isGroup ? ` (👥 ${headcount}人)` : '';
-    const noteSuffix = note.trim() ? ` (備註: ${note.trim()})` : '';
-    
-    // Split macro generation
-    let macro = '';
-    if (paymentMode === 'together') {
-      macro = `歡迎光臨！${customerStr}${groupSuffix}，您的餐點：${itemsStr}，總計 ${total.toLocaleString()} Gil。${noteSuffix}感謝您的惠顧！`;
-    } else {
-      const splitDetail = Object.entries(groupedItems)
-        .map(([name, data]: [string, any]) => `${name} ${data.total.toLocaleString()} Gil`)
-        .join(', ');
-      macro = `歡迎光臨！${customerStr}${groupSuffix}。本桌總計 ${total.toLocaleString()} Gil。各自結帳明細：${splitDetail}。請依序與我交易，感謝！`;
-    }
-
     try {
-      await navigator.clipboard.writeText(macro);
+      await navigator.clipboard.writeText(checkoutMacroText || getGeneratedMacro(paymentMode));
       await createOrder(cart, targetCustomerId, isGroup, headcount, note, customerInput.trim());
       
       // Discord Notification
@@ -525,7 +528,7 @@ ${cart.map(item => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl overflow-y-auto max-h-[92vh] custom-scrollbar"
             >
               <div className="p-8">
                 <div className="flex justify-between items-center mb-8">
@@ -537,7 +540,10 @@ ${cart.map(item => {
 
                 <div className="grid grid-cols-2 gap-4 mb-8">
                   <button 
-                    onClick={() => setPaymentMode('together')}
+                    onClick={() => {
+                      setPaymentMode('together');
+                      setCheckoutMacroText(getGeneratedMacro('together'));
+                    }}
                     className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all gap-3 ${
                       paymentMode === 'together' ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-md' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
                     }`}
@@ -546,7 +552,10 @@ ${cart.map(item => {
                     <span className="font-black text-sm uppercase tracking-widest">合併買單</span>
                   </button>
                   <button 
-                    onClick={() => setPaymentMode('separate')}
+                    onClick={() => {
+                      setPaymentMode('separate');
+                      setCheckoutMacroText(getGeneratedMacro('separate'));
+                    }}
                     className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all gap-3 ${
                       paymentMode === 'separate' ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-md' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
                     }`}
@@ -573,6 +582,31 @@ ${cart.map(item => {
                       ))}
                     </div>
                   )}
+                </div>
+
+                {/* 巨集預覽與編輯區塊 */}
+                <div className="mt-6 space-y-2">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <FileText size={14} className="text-indigo-500" />
+                      發送巨集預覽 (可點擊編輯修改)
+                    </span>
+                    <button 
+                      onClick={() => setCheckoutMacroText(getGeneratedMacro(paymentMode))}
+                      className="text-[10px] font-black text-indigo-500 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100/80 px-2 py-1 rounded-lg transition-colors"
+                      title="重設為預設巨集"
+                    >
+                      <RefreshCw size={10} />
+                      重置
+                    </button>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={checkoutMacroText}
+                    onChange={(e) => setCheckoutMacroText(e.target.value)}
+                    className="w-full text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200/60 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white focus:border-indigo-400 transition-all resize-none font-sans leading-relaxed"
+                    placeholder="請輸入或編輯顧客結帳巨集..."
+                  />
                 </div>
 
                 <button 
