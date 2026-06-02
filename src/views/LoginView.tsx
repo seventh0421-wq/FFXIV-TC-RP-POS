@@ -34,7 +34,7 @@ export const LoginView: React.FC = () => {
   // Activation state
   const [activationCode, setActivationCode] = useState('');
   const [showDisclaimer, setShowDisclaimer] = useState(false);
-  const [showManualLink, setShowManualLink] = useState(false);
+  const [activationSubState, setActivationSubState] = useState<'landing' | 'code' | 'manual'>('landing');
   const [manualShopName, setManualShopName] = useState('');
   
   // Setup state
@@ -92,91 +92,149 @@ export const LoginView: React.FC = () => {
   // 1. Activation View
   if (state.systemStatus === 'activation') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6 relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6 relative overflow-hidden text-slate-800">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent rounded-full blur-[100px] animate-pulse" />
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full blur-[100px] animate-pulse delay-700" />
         </div>
 
-        <div className="relative z-10 w-full max-w-sm">
+        <div className="relative z-10 w-full max-w-md">
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white/10 backdrop-blur-xl p-10 rounded-[2.5rem] border border-white/10 shadow-2xl text-center"
+            className="bg-white/10 backdrop-blur-xl p-8 md:p-10 rounded-[2.5rem] border border-white/10 shadow-2xl text-center"
           >
-            <div className="w-20 h-20 bg-accent rounded-3xl flex items-center justify-center text-white mx-auto mb-8 shadow-xl shadow-accent/40 rotate-6">
-              <Key size={40} />
-            </div>
-            <h1 className="text-4xl font-black text-white mb-2 tracking-tighter">
-              {showManualLink ? '連結至店鋪' : '開通您的系統'}
-            </h1>
-            <p className="text-white/70 font-black mb-10 text-base uppercase tracking-widest text-xs">
-              {showManualLink ? 'Link to Existing Shop Name' : 'Aether Connect POS Activation'}
-            </p>
-
             <AnimatePresence mode="wait">
-              {!showManualLink ? (
-                <motion.form 
-                  key="activation"
-                  initial={{ opacity: 0, y: 10 }}
+              {activationSubState === 'landing' ? (
+                <motion.div
+                  key="landing"
+                  initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  onSubmit={handleActivation} 
-                  className="space-y-4"
+                  exit={{ opacity: 0, y: -15 }}
+                  className="space-y-8 text-center"
                 >
-                  <input 
-                    type="text" 
-                    placeholder="輸入開通碼 (例如: BETA-888)"
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold text-center outline-none focus:border-accent transition-all placeholder:opacity-20"
-                    value={activationCode}
-                    onChange={(e) => setActivationCode(e.target.value)}
-                  />
-                  {error && <p className="text-red-400 text-xs font-bold">{error}</p>}
-                  <button 
-                    type="submit"
-                    className="w-full bg-white text-slate-900 font-black py-4 rounded-2xl hover:bg-slate-100 transition-all active:scale-95 shadow-lg"
-                  >
-                    驗證開通
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => { setShowManualLink(true); setError(''); }}
-                    className="text-xs font-black text-white/40 hover:text-white transition-colors"
-                  >
-                    已經開通過了？點選輸入店鋪名稱登入
-                  </button>
-                </motion.form>
+                  <div>
+                    <div className="w-20 h-20 bg-accent rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-accent/40 rotate-6">
+                      <Key size={40} />
+                    </div>
+                    <h1 className="text-4xl font-black text-white mb-2 tracking-tighter">
+                      乙太連線
+                    </h1>
+                    <p className="text-white/70 font-black text-xs uppercase tracking-[0.25em]">
+                      Aether Connect POS
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => { setActivationSubState('code'); setError(''); }}
+                      className="w-full flex items-center gap-4 p-5 bg-white/10 border border-white/10 rounded-2xl hover:bg-white/15 hover:border-white/20 transition-all text-left group"
+                    >
+                      <div className="w-12 h-12 bg-accent text-white rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform shrink-0">
+                        <Sparkles size={22} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-black text-white text-base">初次系統開通</div>
+                        <div className="text-white/50 text-xs font-bold leading-normal mt-0.5 whitespace-normal">輸入開通代碼，為您的新店鋪建立全新系統</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => { setActivationSubState('manual'); setError(''); }}
+                      className="w-full flex items-center gap-4 p-5 bg-white/10 border border-white/10 rounded-2xl hover:bg-white/15 hover:border-white/20 transition-all text-left group"
+                    >
+                      <div className="w-12 h-12 bg-white text-slate-900 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform shrink-0">
+                        <Store size={22} className="text-slate-900" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-black text-white text-base">已開通 / 店鋪登入</div>
+                        <div className="text-white/50 text-xs font-bold leading-normal mt-0.5 whitespace-normal">輸入現有店鋪名稱，在新裝置連結此店鋪</div>
+                      </div>
+                    </button>
+                  </div>
+                </motion.div>
+              ) : activationSubState === 'code' ? (
+                <motion.div
+                  key="code"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                >
+                  <div className="w-20 h-20 bg-accent rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-accent/40 rotate-6">
+                    <Key size={40} />
+                  </div>
+                  <h1 className="text-3xl font-black text-white mb-2 tracking-tighter">
+                    開通您的系統
+                  </h1>
+                  <p className="text-white/70 font-black mb-8 text-xs uppercase tracking-widest">
+                    Aether Connect POS Activation
+                  </p>
+
+                  <form onSubmit={handleActivation} className="space-y-4">
+                    <input 
+                      type="text" 
+                      placeholder="輸入開通碼 (例如: BETA-888)"
+                      className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold text-center outline-none focus:border-accent transition-all placeholder:opacity-20"
+                      value={activationCode}
+                      onChange={(e) => setActivationCode(e.target.value)}
+                    />
+                    {error && <p className="text-red-400 text-xs font-bold">{error}</p>}
+                    <button 
+                      type="submit"
+                      className="w-full bg-white text-slate-900 font-black py-4 rounded-2xl hover:bg-slate-100 transition-all active:scale-95 shadow-lg"
+                    >
+                      驗證開通
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => { setActivationSubState('landing'); setError(''); }}
+                      className="text-xs font-black text-white/40 hover:text-white transition-colors pt-4 block w-full text-center"
+                    >
+                      返回前頁
+                    </button>
+                  </form>
+                </motion.div>
               ) : (
-                <motion.form 
-                  key="manual-link"
-                  initial={{ opacity: 0, y: 10 }}
+                <motion.div
+                  key="manual"
+                  initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  onSubmit={handleManualLink} 
-                  className="space-y-4"
+                  exit={{ opacity: 0, y: -15 }}
                 >
-                  <input 
-                    type="text" 
-                    placeholder="請輸入店鋪名稱 (例如: 示範用)"
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold text-center outline-none focus:border-accent transition-all placeholder:opacity-20"
-                    value={manualShopName}
-                    onChange={(e) => setManualShopName(e.target.value)}
-                  />
-                  {error && <p className="text-red-400 text-xs font-bold">{error}</p>}
-                  <button 
-                    type="submit"
-                    className="w-full bg-accent text-white font-black py-4 rounded-2xl hover:brightness-110 transition-all active:scale-95 shadow-lg"
-                  >
-                    搜尋並進入登入頁面
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => { setShowManualLink(false); setError(''); }}
-                    className="text-xs font-black text-white/40 hover:text-white transition-colors"
-                  >
-                    返回開通頁面
-                  </button>
-                </motion.form>
+                  <div className="w-20 h-20 bg-white text-slate-900 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl rotate-6">
+                    <Store size={40} className="text-slate-900" />
+                  </div>
+                  <h1 className="text-3xl font-black text-white mb-2 tracking-tighter">
+                    連結至現有店鋪
+                  </h1>
+                  <p className="text-white/70 font-black mb-8 text-xs uppercase tracking-widest">
+                    Link to Existing Shop Name
+                  </p>
+
+                  <form onSubmit={handleManualLink} className="space-y-4">
+                    <input 
+                      type="text" 
+                      placeholder="請輸入店鋪名稱 (例如: 示範用)"
+                      className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold text-center outline-none focus:border-accent transition-all placeholder:opacity-20"
+                      value={manualShopName}
+                      onChange={(e) => setManualShopName(e.target.value)}
+                    />
+                    {error && <p className="text-red-400 text-xs font-bold">{error}</p>}
+                    <button 
+                      type="submit"
+                      className="w-full bg-accent text-white font-black py-4 rounded-2xl hover:brightness-110 transition-all active:scale-95 shadow-lg"
+                    >
+                      搜尋並連結
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => { setActivationSubState('landing'); setError(''); }}
+                      className="text-xs font-black text-white/40 hover:text-white transition-colors pt-4 block w-full text-center"
+                    >
+                      返回前頁
+                    </button>
+                  </form>
+                </motion.div>
               )}
             </AnimatePresence>
 
