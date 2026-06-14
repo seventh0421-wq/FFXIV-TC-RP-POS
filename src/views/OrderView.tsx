@@ -156,7 +156,26 @@ export const OrderView: React.FC = () => {
     }
 
     try {
-      await navigator.clipboard.writeText(checkoutMacroText || getGeneratedMacro(paymentMode));
+      // 嘗試複製巨集文字到剪貼簿，失敗時不阻礙結帳完成
+      try {
+        const textToCopy = checkoutMacroText || getGeneratedMacro(paymentMode);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(textToCopy);
+        } else {
+          // 傳統相容性複製方案
+          const textarea = document.createElement('textarea');
+          textarea.value = textToCopy;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+      } catch (clipboardErr) {
+        console.warn('剪貼簿複製失敗（可能在 iframe 或非安全連線中受限），已略過並繼續結帳：', clipboardErr);
+      }
+
       await createOrder(cart, targetCustomerId, isGroup, headcount, note, customerInput.trim());
       
       // Discord Notification
