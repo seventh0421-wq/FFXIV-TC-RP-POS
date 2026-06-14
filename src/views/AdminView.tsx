@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShieldCheck, Lock, Search, RefreshCw, Plus, Trash2, CheckCircle2, XCircle, Store } from 'lucide-react';
+import { ShieldCheck, Lock, Search, RefreshCw, Plus, Trash2, CheckCircle2, XCircle, Store, Eye, EyeOff } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, getDocs, addDoc, serverTimestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 
@@ -8,6 +8,7 @@ export const AdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [codes, setCodes] = useState<any[]>([]);
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const checkPassword = () => {
@@ -19,17 +20,40 @@ export const AdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   };
 
+  const togglePasswordReveal = (id: string) => {
+    setRevealedPasswords(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
   const fetchCodes = async () => {
     setIsLoading(true);
-    const path = 'activationCodes';
     try {
-      const q = query(collection(db, path));
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setCodes(data);
+      // 1. Fetch activation codes
+      const codesSnap = await getDocs(query(collection(db, 'activationCodes')));
+      const codesData = codesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+
+      // 2. Fetch shops to get passwords
+      const shopsSnap = await getDocs(query(collection(db, 'shops')));
+      const shopsMap: Record<string, any> = {};
+      shopsSnap.forEach(doc => {
+        shopsMap[doc.id] = doc.data();
+      });
+
+      // 3. Merge passwords with activation codes
+      const merged = codesData.map(c => {
+        const shop = shopsMap[c.id];
+        return {
+          ...c,
+          managerPassword: shop?.managerPassword || '',
+          staffPassword: shop?.staffPassword || '',
+        };
+      });
+
+      setCodes(merged);
     } catch (err: any) {
-      console.error("Fetch Codes Error:", err);
-      // We don't throw here to avoid global rejection handler in Admin View
+      console.error("Fetch Data Error:", err);
       alert('連線資料庫失敗，請確認 Firebase 設定或網路連線。' + (err?.message || ''));
     } finally {
       setIsLoading(false);
@@ -176,6 +200,7 @@ export const AdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     <th className="px-8 py-5">序號代碼</th>
                     <th className="px-8 py-5">狀態</th>
                     <th className="px-8 py-5">開通店鋪名稱</th>
+                    <th className="px-8 py-5">店長 / 店員密碼</th>
                     <th className="px-8 py-5">使用日期</th>
                     <th className="px-8 py-5 text-center">操作</th>
                   </tr>
@@ -199,6 +224,34 @@ export const AdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       </td>
                       <td className="px-8 py-5">
                         <span className="text-sm font-black text-slate-700">{code.storeName || '-'}</span>
+                      </td>
+                      <td className="px-8 py-5">
+                        {code.isUsed ? (
+                          <div className="flex items-center gap-3">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">店長</span>
+                              <span className="font-mono text-sm font-black bg-slate-100 px-2 py-0.5 rounded text-slate-700 min-w-[60px] text-center">
+                                {revealedPasswords[code.id] ? (code.managerPassword || '無') : '••••'}
+                              </span>
+                            </div>
+                            <span className="text-xs text-slate-300 self-end mb-1">/</span>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">店員</span>
+                              <span className="font-mono text-sm font-black bg-slate-100 px-2 py-0.5 rounded text-slate-700 min-w-[60px] text-center">
+                                {revealedPasswords[code.id] ? (code.staffPassword || '無') : '••••'}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => togglePasswordReveal(code.id)}
+                              className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 border border-slate-100 transition-all self-end"
+                              title={revealedPasswords[code.id] ? "隱藏密碼" : "顯示密碼"}
+                            >
+                              {revealedPasswords[code.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-medium text-slate-400">-</span>
+                        )}
                       </td>
                       <td className="px-8 py-5">
                         <span className="text-xs font-medium text-slate-400">
