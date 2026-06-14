@@ -13,11 +13,15 @@ export const HistoryView: React.FC = () => {
 
   const completedOrders = (state.orders || [])
     .filter(o => o.status === 'completed')
-    .filter(o => 
-      o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.staffName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (o.customerId && (state.customers || []).find(c => c.id === o.customerId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    .filter(o => {
+      const customer = (state.customers || []).find(c => c.id === o.customerId);
+      const customerName = customer ? customer.name : '';
+      return (
+        o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        o.staffName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customerName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
 
   const handleUpdate = () => {
     if (editingOrder) {
@@ -85,9 +89,9 @@ export const HistoryView: React.FC = () => {
                       {order.customerId ? (
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-xs font-black text-accent">
-                            {state.customers.find(c => c.id === order.customerId)?.name.substring(0, 1)}
+                            {(state.customers.find(c => c.id === order.customerId)?.name ?? '親').substring(0, 1)}
                           </div>
-                          <span className="font-black text-sm">{state.customers.find(c => c.id === order.customerId)?.name}</span>
+                          <span className="font-black text-sm">{state.customers.find(c => c.id === order.customerId)?.name ?? '未知冒險者'}</span>
                         </div>
                       ) : (
                         <span className="text-sm font-black italic opacity-40">散客</span>

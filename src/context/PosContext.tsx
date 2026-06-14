@@ -14,6 +14,13 @@ import {
 
 const PosContext = createContext<PosContextType | undefined>(undefined);
 
+const getLocalDateString = (d: Date = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const DEFAULT_PRODUCTS: Product[] = [];
 
 export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -30,7 +37,7 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       theme: 'warm-retro',
       fontSize: 'medium',
       currentView: 'order',
-      filterDate: new Date().toISOString().split('T')[0],
+      filterDate: getLocalDateString(),
       products: [],
       orders: [],
       customers: [],
@@ -305,7 +312,7 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lastLoginTime: 0,
       theme: 'warm-retro',
       currentView: 'order',
-      filterDate: new Date().toISOString().split('T')[0],
+      filterDate: getLocalDateString(),
       products: [],
       orders: [],
       customers: [],
@@ -446,7 +453,7 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           shopName: data.name || trimmedName,
           theme: data.theme || 'warm-retro',
           currentView: 'order',
-          filterDate: new Date().toISOString().split('T')[0]
+          filterDate: getLocalDateString()
         };
         
         localStorage.setItem('pos_state_v2', JSON.stringify(persistData));
@@ -465,7 +472,7 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const ordersRef = collection(db, 'shops', state.shopId, 'orders');
-      const orderDate = new Date().toISOString().split('T')[0];
+      const orderDate = getLocalDateString();
       
       await addDoc(ordersRef, {
         staffName: state.staffName,
