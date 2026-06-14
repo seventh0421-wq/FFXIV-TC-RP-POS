@@ -58,6 +58,7 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { 
           ...defaultState,
           ...parsed,
+          filterDate: getLocalDateString(),
           systemStatus,
           isLoggedIn: false,
           role: 'none',
@@ -467,18 +468,37 @@ export const PosProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const cleanForFirestore = (val: any): any => {
+    if (val === undefined) return null;
+    if (val === null) return null;
+    if (Array.isArray(val)) {
+      return val.map(cleanForFirestore);
+    }
+    if (typeof val === 'object') {
+      const res: any = {};
+      for (const key of Object.keys(val)) {
+        if (val[key] !== undefined) {
+          res[key] = cleanForFirestore(val[key]);
+        }
+      }
+      return res;
+    }
+    return val;
+  };
+
   const createOrder = async (items: CartItem[], customerId?: string, isGroup?: boolean, headcount?: number, note?: string, customerName?: string) => {
     if (!state.shopId) return;
     try {
       const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const ordersRef = collection(db, 'shops', state.shopId, 'orders');
       const orderDate = getLocalDateString();
+      const cleanItems = cleanForFirestore(items);
       
       await addDoc(ordersRef, {
         staffName: state.staffName,
         customerId: customerId || null,
         customerName: customerName || null,
-        items,
+        items: cleanItems,
         total,
         status: 'pending',
         createdAt: serverTimestamp(),
