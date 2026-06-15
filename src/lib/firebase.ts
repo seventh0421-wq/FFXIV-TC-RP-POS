@@ -68,7 +68,7 @@ async function testConnection() {
     await getDocFromServer(connDoc);
   } catch (error: any) {
     if (error?.message?.includes('offline')) {
-      console.error("Please check your Firebase configuration. The client is offline.");
+      console.warn("Please check your Firebase configuration. The client is offline.");
     } else {
       // Even a permission-denied error is good, it means we reached the server
       console.log("Firestore reachability test completed.");

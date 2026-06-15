@@ -12,6 +12,11 @@ export const AnalyticsView: React.FC = () => {
   const [manualAdjustments, setManualAdjustments] = useState<Record<string, number>>({});
   const [manuallyAddedStaff, setManuallyAddedStaff] = useState<string[]>([]);
   const [paidStatus, setPaidStatus] = useState<Record<string, boolean>>({});
+  
+  // Salary calculation approval configs (manager can check/uncheck to include in final payable salary)
+  const [includeBaseSalary, setIncludeBaseSalary] = useState(true);
+  const [includeTotalSales, setIncludeTotalSales] = useState(false); // Default to false because sales total should usually not directly go into wage
+  const [includeCommission, setIncludeCommission] = useState(true);
 
   const completedOrders = useMemo(() => 
     (state.orders || []).filter(o => o.status === 'completed')
@@ -94,11 +99,13 @@ export const AnalyticsView: React.FC = () => {
   const totalPayout = useMemo(() => {
     return payrollData.reduce((sum, data) => {
       const hoursAdjusted = staffHours[data.staffName] ?? shiftHours;
-      const baseSalary = hoursAdjusted * state.hourlyWage;
+      const baseSalary = includeBaseSalary ? (hoursAdjusted * state.hourlyWage) : 0;
+      const totalSalesAmt = includeTotalSales ? data.totalSales : 0;
+      const commissionAmt = includeCommission ? data.commission : 0;
       const adjustment = manualAdjustments[data.staffName] || 0;
-      return sum + baseSalary + data.totalSales + data.commission + adjustment;
+      return sum + baseSalary + totalSalesAmt + commissionAmt + adjustment;
     }, 0);
-  }, [payrollData, staffHours, shiftHours, state.hourlyWage, manualAdjustments]);
+  }, [payrollData, staffHours, shiftHours, state.hourlyWage, manualAdjustments, includeBaseSalary, includeTotalSales, includeCommission]);
 
   // 4. Product Rankings
   const productRankings = useMemo(() => {
@@ -123,17 +130,19 @@ export const AnalyticsView: React.FC = () => {
     const headers = ['結算日期', '店員名稱', '結算時數', '預計底薪', '總接單金額', '業績抽成', '手動調整', '最終應發額', '已領薪'];
     const rows = payrollData.map(data => {
       const hoursAdjusted = staffHours[data.staffName] ?? shiftHours;
-      const baseSalary = hoursAdjusted * state.hourlyWage;
+      const baseSalary = includeBaseSalary ? (hoursAdjusted * state.hourlyWage) : 0;
+      const totalSalesAmt = includeTotalSales ? data.totalSales : 0;
+      const commissionAmt = includeCommission ? data.commission : 0;
       const adjustment = manualAdjustments[data.staffName] || 0;
-      const finalPay = baseSalary + data.totalSales + data.commission + adjustment;
+      const finalPay = baseSalary + totalSalesAmt + commissionAmt + adjustment;
       const isPaid = paidStatus[data.staffName] ? '是' : '否';
       return [
         state.filterDate,
         data.staffName,
         hoursAdjusted,
         baseSalary,
-        data.totalSales,
-        Math.round(data.commission),
+        totalSalesAmt,
+        Math.round(commissionAmt),
         adjustment,
         Math.round(finalPay),
         isPaid
@@ -348,15 +357,71 @@ export const AnalyticsView: React.FC = () => {
               </div>
             </div>
 
+            {/* Manager Salary Calculation Setting Board */}
+            <div className="bg-amber-50/40 border border-amber-200/50 p-6 rounded-[2rem] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                  店長核可設定
+                </span>
+                <h4 className="text-base font-black text-slate-800">薪資計算項目核可設定</h4>
+                <p className="text-xs text-slate-400 font-bold">由店長核可/勾選哪些項目的金額應計入「最終應發放」的薪水金額中：</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-6">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={includeBaseSalary}
+                    onChange={(e) => setIncludeBaseSalary(e.target.checked)}
+                    className="w-5 h-5 rounded border-slate-300 text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer accent-amber-600"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-slate-700 group-hover:text-amber-700 transition-colors">核可：基本底薪</span>
+                    <span className="text-[10px] text-slate-400 font-bold">時數 × 時薪</span>
+                  </div>
+                </label>
+
+                <div className="h-6 w-px bg-slate-200 hidden md:block" />
+
+                <label className="flex items-center gap-2 cursor-pointer group flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={includeTotalSales}
+                    onChange={(e) => setIncludeTotalSales(e.target.checked)}
+                    className="w-5 h-5 rounded border-slate-300 text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer accent-amber-600"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-slate-700 group-hover:text-amber-700 transition-colors">核可：接單總額</span>
+                    <span className="text-[10px] text-slate-400 font-bold">訂單收入 (通常歸店鋪，不計薪)</span>
+                  </div>
+                </label>
+
+                <div className="h-6 w-px bg-slate-200 hidden md:block" />
+
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={includeCommission}
+                    onChange={(e) => setIncludeCommission(e.target.checked)}
+                    className="w-5 h-5 rounded border-slate-300 text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer accent-amber-600"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-slate-700 group-hover:text-amber-700 transition-colors">核可：業績抽成</span>
+                    <span className="text-[10px] text-slate-400 font-bold">個人銷售抽成金額</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <div className="pos-card rounded-[3rem] bg-white border pos-border overflow-hidden shadow-sm">
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-black/5 text-xs font-black uppercase tracking-[0.15em] opacity-60">
                     <th className="px-8 py-6">店員名稱</th>
                     <th className="px-8 py-6">個人微調時數</th>
-                    <th className="px-8 py-6">基本底薪 (G)</th>
-                    <th className="px-8 py-6">接單總額 (G)</th>
-                    <th className="px-8 py-6">業績抽成 (G)</th>
+                    <th className={`px-8 py-6 transition-all ${!includeBaseSalary ? 'opacity-30 line-through' : ''}`}>基本底薪 (G)</th>
+                    <th className={`px-8 py-6 transition-all ${!includeTotalSales ? 'opacity-30 line-through' : ''}`}>接單總額 (G)</th>
+                    <th className={`px-8 py-6 transition-all ${!includeCommission ? 'opacity-30 line-through' : ''}`}>業績抽成 (G)</th>
                     <th className="px-8 py-6">手動調整 (±G)</th>
                     <th className="px-8 py-6 text-right">最終應發放</th>
                     <th className="px-8 py-6 text-center">已發薪</th>
@@ -365,9 +430,11 @@ export const AnalyticsView: React.FC = () => {
                 <tbody className="divide-y pos-border">
                   {payrollData.length > 0 ? payrollData.map((data) => {
                     const hoursAdjusted = staffHours[data.staffName] ?? shiftHours;
-                    const baseSalary = hoursAdjusted * state.hourlyWage;
+                    const baseSalary = includeBaseSalary ? (hoursAdjusted * state.hourlyWage) : 0;
+                    const totalSalesAmt = includeTotalSales ? data.totalSales : 0;
+                    const commissionAmt = includeCommission ? data.commission : 0;
                     const adjustment = manualAdjustments[data.staffName] || 0;
-                    const finalPay = baseSalary + data.totalSales + data.commission + adjustment;
+                    const finalPay = baseSalary + totalSalesAmt + commissionAmt + adjustment;
                     return (
                       <tr key={data.staffName} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-8 py-7 font-black text-slate-800 text-lg flex items-center gap-2">
@@ -386,11 +453,11 @@ export const AnalyticsView: React.FC = () => {
                             className="w-20 bg-black/5 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-accent font-black text-xs transition-all text-center"
                           />
                         </td>
-                        <td className="px-8 py-7 font-mono text-sm font-bold opacity-60">
-                          {baseSalary.toLocaleString()}
+                        <td className={`px-8 py-7 font-mono text-sm font-bold transition-all ${!includeBaseSalary ? 'opacity-20 line-through' : 'opacity-60'}`}>
+                          {(hoursAdjusted * state.hourlyWage).toLocaleString()}
                         </td>
-                        <td className="px-8 py-7 font-mono text-sm font-bold opacity-60">{data.totalSales.toLocaleString()}</td>
-                        <td className="px-8 py-7 font-mono text-sm font-black text-accent">{Math.round(data.commission).toLocaleString()}</td>
+                        <td className={`px-8 py-7 font-mono text-sm font-bold transition-all ${!includeTotalSales ? 'opacity-20 line-through' : 'opacity-60'}`}>{data.totalSales.toLocaleString()}</td>
+                        <td className={`px-8 py-7 font-mono text-sm font-black transition-all ${!includeCommission ? 'opacity-20 line-through text-slate-400' : 'text-accent'}`}>{Math.round(data.commission).toLocaleString()}</td>
                         <td className="px-8 py-7">
                           <input 
                             type="number"
@@ -483,9 +550,9 @@ export const AnalyticsView: React.FC = () => {
                    <h4 className="text-base font-black text-white uppercase tracking-widest">店長安全指南：結算邏輯說明</h4>
                    <p className="text-xs text-white/50 leading-relaxed font-bold max-w-2xl">
                      本報表採用「班次結算制 (Shift-based Payroll)」。系統自動從選定日期的已完成訂單中萃取當日出勤名單。<br />
-                     <span className="text-accent underline font-black">計算公式：</span> (個人微調時數 * 店鋪預設時薪) + 業績抽成 + 手動調整 = 最終應發放金額。<br />
+                     <span className="text-accent underline font-black">計算公式：</span> 依據上方「店長核可設定」勾選之項目：(核可時數底薪) + (核可接單金額) + (核可額外抽成) + 手動調整 = 最終應發放金額。<br />
                      <span className="text-accent underline font-black">店鋪時薪：</span> 目前設定為 {state.hourlyWage} G / 小時（可在「系統設定」中調整）。<br />
-                     手動調整與發薪狀態為「暫時性狀態」，重新整理後會重置，請在結算完成後下載 CSV 存檔。
+                     核可設定項目、手動調整與發薪狀態為「暫時性狀態」，重新整理後會重置，請在結算完成後下載 CSV 存檔。
                    </p>
                  </div>
                </div>
