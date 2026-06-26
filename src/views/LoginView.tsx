@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePos } from '../context/PosContext';
 import { Sparkles, Crown, Key, LogIn, Store, Users, User, ShieldCheck, Rocket } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { collection, getDocs, query } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export const DisclaimerContent: React.FC = () => (
     <div className="space-y-6 text-base text-slate-800 leading-relaxed max-h-[60vh] overflow-y-auto pr-4 font-black text-left">
@@ -31,6 +33,45 @@ export const DisclaimerContent: React.FC = () => (
 export const LoginView: React.FC = () => {
   const { state, setView, activateCode, setupShop, loginManager, loginStaff, resetSystem, linkExistingShop } = usePos();
   
+  // Part-time shop switching state
+  const [availableShops, setAvailableShops] = useState<{ id: string, name: string }[]>([]);
+  const [selectedShopName, setSelectedShopName] = useState('');
+  const [customShopName, setCustomShopName] = useState('');
+  const [isSwitchingShop, setIsSwitchingShop] = useState(false);
+
+  useEffect(() => {
+    const fetchShops = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'shops')));
+        const shops = snap.docs
+          .map(doc => ({
+            id: doc.id,
+            name: (doc.data().name || '') as string
+          }))
+          .filter(shop => shop.name.trim() !== '');
+        setAvailableShops(shops);
+      } catch (err) {
+        console.error("Failed to load shops list:", err);
+      }
+    };
+    fetchShops();
+  }, []);
+
+  const handleSwitchShop = async () => {
+    const targetShop = selectedShopName || customShopName.trim();
+    if (!targetShop) {
+      setError('請選擇或輸入店鋪名稱');
+      return;
+    }
+    setError('');
+    setIsSwitchingShop(true);
+    const success = await linkExistingShop(targetShop);
+    setIsSwitchingShop(false);
+    if (!success) {
+      setError(`找不到名稱為「${targetShop}」的店鋪，請確認名稱是否正確。`);
+    }
+  };
+
   // Activation state
   const [activationCode, setActivationCode] = useState('');
   const [showDisclaimer, setShowDisclaimer] = useState(false);
@@ -446,6 +487,63 @@ export const LoginView: React.FC = () => {
                   exit={{ opacity: 0, x: 10 }}
                   className="space-y-6"
                 >
+                  {/* Shop Switching Section for Part-time Clerks */}
+                  <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl space-y-3 shadow-inner">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-black text-slate-500">
+                        <Store size={14} className="text-accent" />
+                        <span>目前店鋪：<span className="text-slate-900 underline decoration-accent/40">{state.shopName || '未連結'}</span></span>
+                      </div>
+                      <span className="text-[10px] bg-accent/10 text-accent font-black px-2 py-0.5 rounded-md tracking-wider">
+                        兼職切換
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className="relative">
+                        <select
+                          className="w-full bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-4 py-2.5 text-xs outline-none font-black appearance-none cursor-pointer text-slate-700"
+                          value={selectedShopName}
+                          onChange={(e) => {
+                            setSelectedShopName(e.target.value);
+                            setCustomShopName('');
+                          }}
+                        >
+                          <option value="">-- 點擊選擇兼職店家 --</option>
+                          {availableShops.map(s => (
+                            <option key={s.id} value={s.name}>{s.name}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="或在此手動輸入店名"
+                          className="flex-1 bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-4 py-2.5 text-xs outline-none font-black text-slate-700 placeholder:text-slate-300"
+                          value={customShopName}
+                          onChange={(e) => {
+                            setCustomShopName(e.target.value);
+                            setSelectedShopName('');
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSwitchShop}
+                          disabled={isSwitchingShop || (!selectedShopName && !customShopName.trim())}
+                          className="bg-slate-900 hover:bg-black disabled:opacity-30 disabled:hover:bg-slate-900 text-white font-black text-xs px-4 rounded-xl transition-all shadow-sm shrink-0 flex items-center justify-center"
+                        >
+                          {isSwitchingShop ? '切換中...' : '確認切換'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <label className="text-xs font-black uppercase tracking-widest opacity-70 px-1 flex items-center gap-1.5">
                       <User size={14} /> 您的角色名稱
